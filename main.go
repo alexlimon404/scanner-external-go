@@ -67,7 +67,7 @@ func NewClient(uniqueID, authToken, version, apiURL string, limit int) *Client {
 	}
 }
 
-func (c *Client) createRequest(method, endpoint string, body io.Reader) (*http.Request, error) {
+func (c *Client) createRequest(method string, endpoint string, body io.Reader) (*http.Request, error) {
 	url := fmt.Sprintf("%s/api/%s", c.apiURL, endpoint)
 
 	req, err := http.NewRequest(method, url, body)
