@@ -37,9 +37,9 @@ func NewClient(cfg *config.Config) *Client {
 }
 
 func (c *Client) createRequest(method string, endpoint string, body io.Reader) (*http.Request, error) {
-	url := fmt.Sprintf("%s/api/%s", c.apiURL, endpoint)
+	requestURL := fmt.Sprintf("%s/api/%s", c.apiURL, endpoint)
 
-	req, err := http.NewRequest(method, url, body)
+	req, err := http.NewRequest(method, requestURL, body)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +59,7 @@ func (c *Client) doRequest(req *http.Request) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, fmt.Errorf("HTTP error: %d %s", resp.StatusCode, resp.Status)
