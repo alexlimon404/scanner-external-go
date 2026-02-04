@@ -19,9 +19,9 @@ func scanPort(ip string, port int, timeout time.Duration) *models.ScanResult {
 	if err != nil {
 		return nil
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
-	conn.SetReadDeadline(time.Now().Add(timeout))
+	_ = conn.SetReadDeadline(time.Now().Add(timeout))
 
 	httpRequest := "GET / HTTP/1.0\r\n\r\n"
 	_, writeErr := conn.Write([]byte(httpRequest))
