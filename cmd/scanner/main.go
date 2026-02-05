@@ -19,5 +19,5 @@ func main() {
 
 	client := api.NewClient(cfg)
 
-	scanner.StartContinuousProcessing(client, 40*time.Second)
+	scanner.StartContinuousProcessing(client, 20*time.Second)
 }
