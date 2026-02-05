@@ -38,8 +38,12 @@ func scanPort(ip string, port int, timeout time.Duration) *models.ScanResult {
 			}
 			return -1
 		}, data)
+	} else if writeErr != nil {
+		data = fmt.Sprintf("write_error: %v", writeErr)
+	} else if readErr != nil {
+		data = fmt.Sprintf("read_error: %v", readErr)
 	} else {
-		data = "empty"
+		data = "empty: 0 bytes read"
 	}
 
 	return &models.ScanResult{
