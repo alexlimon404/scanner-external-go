@@ -30,6 +30,7 @@ func scanPort(ip string, port int, timeout time.Duration) *models.ScanResult {
 	n, readErr := conn.Read(buffer)
 
 	var data string
+	var statusCode int
 	if writeErr == nil && readErr == nil && n > 0 {
 		data = strings.TrimSpace(string(buffer[:n]))
 		data = strings.Map(func(r rune) rune {
@@ -38,6 +39,16 @@ func scanPort(ip string, port int, timeout time.Duration) *models.ScanResult {
 			}
 			return -1
 		}, data)
+
+		// Parse HTTP status code from the response status line (e.g. "HTTP/1.0 200 OK")
+		if firstLine, _, ok := strings.Cut(data, "\r\n"); ok {
+			parts := strings.SplitN(firstLine, " ", 3)
+			if len(parts) >= 2 {
+				if code, err := strconv.Atoi(parts[1]); err == nil {
+					statusCode = code
+				}
+			}
+		}
 	} else if writeErr != nil {
 		data = fmt.Sprintf("write_error: %v", writeErr)
 	} else if readErr != nil {
@@ -49,7 +60,7 @@ func scanPort(ip string, port int, timeout time.Duration) *models.ScanResult {
 	return &models.ScanResult{
 		IP:     ip,
 		Port:   strconv.Itoa(port),
-		Status: 200,
+		Status: statusCode,
 		Data:   data,
 	}
 }
