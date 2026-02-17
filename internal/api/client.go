@@ -44,12 +44,17 @@ func (c *Client) createRequest(method string, endpoint string, body io.Reader) (
 		return nil, err
 	}
 
+	// Список поддерживаемых типов задач
+	supportedJobTypes := []string{"check_ips", "execute_command"}
+	supportedJobTypesJSON, _ := json.Marshal(supportedJobTypes)
+
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("unique", c.uniqueID)
 	req.Header.Set("token", c.authToken)
 	req.Header.Set("app-version", c.version)
 	req.Header.Set("app-type", "go")
+	req.Header.Set("supported-job-types", string(supportedJobTypesJSON))
 
 	return req, nil
 }
@@ -94,8 +99,8 @@ func (c *Client) GetJobs() (*models.JobsResponse, error) {
 	return &jobs, nil
 }
 
-func (c *Client) SuccessJob(jobID int, results []models.ScanResult) error {
-	resultMap := map[string][]models.ScanResult{
+func (c *Client) SuccessJob(jobID int, results interface{}) error {
+	resultMap := map[string]interface{}{
 		strconv.Itoa(jobID): results,
 	}
 

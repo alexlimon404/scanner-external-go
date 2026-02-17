@@ -1,6 +1,7 @@
 package scanner
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 	"strconv"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"scanner-external-go/internal/api"
+	"scanner-external-go/internal/executor"
 	"scanner-external-go/internal/models"
 )
 
@@ -100,54 +102,72 @@ func ScanPortOnAllIPs(ips []string, port int, timeout time.Duration) []models.Sc
 	return results
 }
 
-func ScanJob(job models.Job) []models.ScanResult {
+func ScanJob(jobID int, data models.CheckIpsData) []models.ScanResult {
 	var allResults []models.ScanResult
-	timeout := time.Duration(job.Payload.Data.Timeout) * time.Second
+	timeout := time.Duration(data.Timeout) * time.Second
 
-	fmt.Printf("Starting job %d: %d IPs, %d ports\n", job.ID, len(job.Payload.Data.IPs), len(job.Payload.Data.Ports))
+	fmt.Printf("Starting job %d: %d IPs, %d ports\n", jobID, len(data.IPs), len(data.Ports))
 
-	for portIndex, port := range job.Payload.Data.Ports {
+	for portIndex, port := range data.Ports {
 		fmt.Printf("Job %d: Scanning port %d (%d/%d) on %d IPs...\n",
-			job.ID, port, portIndex+1, len(job.Payload.Data.Ports), len(job.Payload.Data.IPs))
+			jobID, port, portIndex+1, len(data.Ports), len(data.IPs))
 
 		startTime := time.Now()
-		results := ScanPortOnAllIPs(job.Payload.Data.IPs, port, timeout)
+		results := ScanPortOnAllIPs(data.IPs, port, timeout)
 		duration := time.Since(startTime)
 
 		allResults = append(allResults, results...)
 
 		fmt.Printf("Job %d: Port %d completed in %v - found %d open ports\n",
-			job.ID, port, duration, len(results))
+			jobID, port, duration, len(results))
 	}
 
 	return allResults
 }
 
 func ProcessJob(client *api.Client, job models.Job) error {
-	if job.Type != "check_ips" {
+	startTime := time.Now()
+	var resultsInterface interface{}
+
+	switch job.Type {
+	case "check_ips":
+		// Парсим данные для check_ips
+		dataBytes, err := json.Marshal(job.Payload.Data)
+		if err != nil {
+			return fmt.Errorf("failed to marshal job data: %v", err)
+		}
+
+		var checkIpsData models.CheckIpsData
+		if err := json.Unmarshal(dataBytes, &checkIpsData); err != nil {
+			return fmt.Errorf("failed to unmarshal check_ips data: %v", err)
+		}
+
+		results := ScanJob(job.ID, checkIpsData)
+		resultsInterface = results
+		fmt.Printf("Job %d completed in %v: found %d total open ports\n",
+			job.ID, time.Since(startTime), len(results))
+
+	case "execute_command":
+		result, err := executor.ProcessCommandJob(job)
+		if err != nil {
+			fmt.Printf("Error executing command for job %d: %v\n", job.ID, err)
+		}
+		// Отправляем результат как массив с одним элементом
+		resultsInterface = []models.CommandExecutionResult{result}
+		fmt.Printf("Job %d completed in %v: exit_code=%d\n",
+			job.ID, time.Since(startTime), result.ExitCode)
+
+	default:
 		fmt.Printf("Skipping job %d: unsupported type %s\n", job.ID, job.Type)
 		return nil
 	}
 
-	startTime := time.Now()
-
-	results := ScanJob(job)
-
-	duration := time.Since(startTime)
-	fmt.Printf("Job %d completed in %v: found %d total open ports\n",
-		job.ID, duration, len(results))
-
-	err := client.SuccessJob(job.ID, results)
+	err := client.SuccessJob(job.ID, resultsInterface)
 	if err != nil {
 		return fmt.Errorf("failed to send results for job %d: %v", job.ID, err)
 	}
 
-	if len(results) > 0 {
-		fmt.Printf("Results for job %d sent successfully (%d results)\n", job.ID, len(results))
-	} else {
-		fmt.Printf("Empty results for job %d sent successfully\n", job.ID)
-	}
-
+	fmt.Printf("Results for job %d sent successfully\n", job.ID)
 	return nil
 }
 
