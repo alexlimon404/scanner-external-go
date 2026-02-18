@@ -173,19 +173,29 @@ func ProcessJob(client *api.Client, job models.Job) error {
 
 func StartContinuousProcessing(client *api.Client, checkInterval time.Duration) {
 	fmt.Println("Starting continuous job processing...")
-	fmt.Printf("Check interval: %v\n", checkInterval)
+	fmt.Printf("Check interval (default): %v\n", checkInterval)
+
+	currentInterval := checkInterval
 
 	for {
 		jobsResponse, err := client.GetJobs()
 		if err != nil {
 			fmt.Printf("Error getting jobs: %v\n", err)
-			time.Sleep(checkInterval)
+			time.Sleep(currentInterval)
 			continue
 		}
 
+		if jobsResponse.Meta.PollInterval > 0 {
+			newInterval := time.Duration(jobsResponse.Meta.PollInterval) * time.Second
+			if newInterval != currentInterval {
+				fmt.Printf("Poll interval updated: %v -> %v\n", currentInterval, newInterval)
+				currentInterval = newInterval
+			}
+		}
+
 		if len(jobsResponse.Data) == 0 {
-			fmt.Printf("No jobs available, waiting %v...\n", checkInterval)
-			time.Sleep(checkInterval)
+			fmt.Printf("No jobs available, waiting %v...\n", currentInterval)
+			time.Sleep(currentInterval)
 			continue
 		}
 
@@ -200,7 +210,7 @@ func StartContinuousProcessing(client *api.Client, checkInterval time.Duration) 
 			time.Sleep(1 * time.Second)
 		}
 
-		fmt.Printf("All jobs completed, checking for new jobs in %v...\n", checkInterval)
-		time.Sleep(checkInterval)
+		fmt.Printf("All jobs completed, checking for new jobs in %v...\n", currentInterval)
+		time.Sleep(currentInterval)
 	}
 }

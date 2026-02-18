@@ -28,8 +28,13 @@ type ExecuteCommandData struct {
 	Env        map[string]string `json:"env"`
 }
 
+type JobsResponseMeta struct {
+	PollInterval int `json:"poll_interval"`
+}
+
 type JobsResponse struct {
-	Data []Job `json:"data"`
+	Data []Job            `json:"data"`
+	Meta JobsResponseMeta `json:"meta"`
 }
 
 type ScanResult struct {
