@@ -79,12 +79,7 @@ func ScanPortOnAllIPs(ips []string, port int, timeout time.Duration) []models.Sc
 	}
 	close(ipChan)
 
-	numWorkers := len(ips)
-	if numWorkers > 400 {
-		numWorkers = 400
-	}
-
-	for i := 0; i < numWorkers; i++ {
+	for i := 0; i < len(ips); i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
