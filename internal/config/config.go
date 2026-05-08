@@ -30,6 +30,6 @@ func Load() (*Config, error) {
 		UniqueID:  os.Getenv("SCANNER_UNIQUE_ID"),
 		AuthToken: os.Getenv("SCANNER_AUTH_TOKEN"),
 		Limit:     limit,
-		Version:   "0.3.1",
+		Version:   "0.3.2",
 	}, nil
 }

@@ -45,7 +45,7 @@ func (c *Client) createRequest(method string, endpoint string, body io.Reader) (
 	}
 
 	// Список поддерживаемых типов задач
-	supportedJobTypes := []string{"check_ips", "execute_command"}
+	supportedJobTypes := []string{"check_ips", "execute_command", "internetdb"}
 	supportedJobTypesJSON, _ := json.Marshal(supportedJobTypes)
 
 	req.Header.Set("Accept", "application/json")
@@ -99,13 +99,19 @@ func (c *Client) GetJobs() (*models.JobsResponse, error) {
 	return &jobs, nil
 }
 
-func (c *Client) SuccessJob(jobID int, results interface{}) error {
+func (c *Client) SuccessJob(jobID int, results interface{}, meta ...interface{}) error {
 	resultMap := map[string]interface{}{
 		strconv.Itoa(jobID): results,
 	}
 
 	payload := map[string]interface{}{
 		"data": resultMap,
+	}
+
+	if len(meta) > 0 && meta[0] != nil {
+		payload["meta"] = map[string]interface{}{
+			strconv.Itoa(jobID): meta[0],
+		}
 	}
 
 	jsonData, err := json.Marshal(payload)

@@ -11,6 +11,7 @@ import (
 
 	"scanner-external-go/internal/api"
 	"scanner-external-go/internal/executor"
+	"scanner-external-go/internal/internetdb"
 	"scanner-external-go/internal/models"
 )
 
@@ -151,6 +152,17 @@ func ProcessJob(client *api.Client, job models.Job) error {
 		resultsInterface = []models.CommandExecutionResult{result}
 		fmt.Printf("Job %d completed in %v: exit_code=%d\n",
 			job.ID, time.Since(startTime), result.ExitCode)
+
+	case "internetdb":
+		results, stats, err := internetdb.ProcessJob(job)
+		if err != nil {
+			return fmt.Errorf("internetdb job %d failed: %v", job.ID, err)
+		}
+		resultsInterface = results
+		fmt.Printf("Job %d (internetdb) completed in %v: %d IPs\n",
+			job.ID, time.Since(startTime), len(results))
+
+		return client.SuccessJob(job.ID, resultsInterface, stats)
 
 	default:
 		fmt.Printf("Skipping job %d: unsupported type %s\n", job.ID, job.Type)

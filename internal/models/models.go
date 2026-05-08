@@ -19,6 +19,31 @@ type CheckIpsData struct {
 	Timeout int      `json:"timeout"`
 }
 
+// InternetDbData используется для type = "internetdb"
+type InternetDbData struct {
+	IPs []string `json:"ips"`
+}
+
+// InternetDbStats — статистика выполнения internetdb job'а
+type InternetDbStats struct {
+	Total      int   `json:"total"`
+	Found      int   `json:"found"`
+	NotFound   int   `json:"not_found"`
+	Errors     int   `json:"errors"`
+	DurationMs int64 `json:"duration_ms"`
+}
+
+// InternetDbResult — результат проверки одного IP через InternetDB
+type InternetDbResult struct {
+	IP         string   `json:"ip"`
+	Ports      []int    `json:"ports"`
+	Hostnames  []string `json:"hostnames"`
+	Tags       []string `json:"tags"`
+	Vulns      []string `json:"vulns"`
+	Cpes       []string `json:"cpes"`
+	FetchError string   `json:"fetch_error,omitempty"`
+}
+
 // ExecuteCommandData используется для type = "execute_command"
 type ExecuteCommandData struct {
 	Command    string            `json:"command"`
