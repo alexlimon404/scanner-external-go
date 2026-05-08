@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"time"
 
@@ -11,10 +12,11 @@ import (
 )
 
 const (
-	baseURL    = "https://internetdb.shodan.io"
-	maxRetries = 3
-	retryDelay = 5 * time.Second
-	rateDelay  = 1100 * time.Millisecond // чуть больше 1s чтобы не задеть лимит
+	baseURL      = "https://internetdb.shodan.io"
+	maxRetries   = 5
+	retryDelay   = 10 * time.Second
+	rateDelay    = 1200 * time.Millisecond // чуть больше 1s чтобы не задеть лимит (1.2)
+	timeoutDelay = 15 * time.Second
 )
 
 var httpClient = &http.Client{
@@ -38,6 +40,14 @@ func fetchHost(ip string) *models.InternetDbResult {
 	for attempt := 0; attempt <= maxRetries; attempt++ {
 		resp, err := httpClient.Get(fmt.Sprintf("%s/%s", baseURL, ip))
 		if err != nil {
+			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+				if attempt < maxRetries {
+					time.Sleep(timeoutDelay)
+					continue
+				}
+				result.FetchError = "timeout"
+				return result
+			}
 			result.FetchError = err.Error()
 			return result
 		}
@@ -110,16 +120,16 @@ func ProcessJob(job models.Job) ([]models.InternetDbResult, models.InternetDbSta
 
 		if r == nil {
 			stats.NotFound++
-			fmt.Printf("  [%d/%d] %s → not found\n", i+1, stats.Total, ip)
+			//fmt.Printf("  [%d/%d] %s → not found\n", i+1, stats.Total, ip)
 			continue
 		}
 
 		if r.FetchError != "" {
 			stats.Errors++
-			fmt.Printf("  [%d/%d] %s → error: %s\n", i+1, stats.Total, ip, r.FetchError)
+			//fmt.Printf("  [%d/%d] %s → error: %s\n", i+1, stats.Total, ip, r.FetchError)
 		} else {
 			stats.Found++
-			fmt.Printf("  [%d/%d] %s → ports: %v\n", i+1, stats.Total, ip, r.Ports)
+			//fmt.Printf("  [%d/%d] %s → ports: %v\n", i+1, stats.Total, ip, r.Ports)
 		}
 
 		results = append(results, *r)
